@@ -13,3 +13,11 @@ aoc-runner-derive = "0.2.2"
 nom = "5.0.1"
 btoi = "0.4.1"
 num-traits = "0.2.10"
+rayon = "1.2.1"
+simd_aligned = "0.2.1"
+
+[profile.release]
+lto = true
+
+[profile.bench]
+lto = true
