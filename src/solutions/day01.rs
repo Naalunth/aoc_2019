@@ -25,7 +25,7 @@ fn fuel_requirement(weight: i64) -> i64 {
 }
 
 #[aoc(day1, part2, recursive)]
-pub fn part_2(input: &PartInput) -> i64 {
+pub fn part_2_recursive(input: &PartInput) -> i64 {
     fn recursive_fuel_requirement(weight: i64) -> i64 {
         match fuel_requirement(weight) {
             fuel @ 0..=std::i64::MAX => fuel + recursive_fuel_requirement(fuel),
@@ -40,7 +40,7 @@ pub fn part_2(input: &PartInput) -> i64 {
 }
 
 #[aoc(day1, part2, iterative)]
-pub fn part_2_recursive(input: &PartInput) -> i64 {
+pub fn part_2(input: &PartInput) -> i64 {
     fn recursive_fuel_requirement(weight: i64) -> i64 {
         let initial_weight = fuel_requirement(weight);
         let mut total_weight = initial_weight;
