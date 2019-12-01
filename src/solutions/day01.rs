@@ -24,7 +24,7 @@ fn fuel_requirement(weight: i64) -> i64 {
     weight / 3 - 2
 }
 
-#[aoc(day1, part2, iterative)]
+#[aoc(day1, part2, recursive)]
 pub fn part_2(input: &PartInput) -> i64 {
     fn recursive_fuel_requirement(weight: i64) -> i64 {
         match fuel_requirement(weight) {
@@ -39,7 +39,7 @@ pub fn part_2(input: &PartInput) -> i64 {
         .sum()
 }
 
-#[aoc(day1, part2, recursive)]
+#[aoc(day1, part2, iterative)]
 pub fn part_2_recursive(input: &PartInput) -> i64 {
     fn recursive_fuel_requirement(weight: i64) -> i64 {
         let initial_weight = fuel_requirement(weight);
