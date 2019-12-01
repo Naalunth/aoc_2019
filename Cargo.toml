@@ -1,0 +1,15 @@
+[package]
+name = "aoc_naalunth_2019"
+version = "0.1.0"
+authors = ["Naalunth <me@naalunth.dev>"]
+edition = "2018"
+
+[lib]
+bench = false
+
+[dependencies]
+aoc-runner = "0.2.2"
+aoc-runner-derive = "0.2.2"
+nom = "5.0.1"
+btoi = "0.4.1"
+num-traits = "0.2.10"
