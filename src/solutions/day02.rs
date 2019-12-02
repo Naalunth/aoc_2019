@@ -1,25 +1,22 @@
 use crate::util::parsers::unsigned_number;
 use aoc_runner_derive::{aoc, aoc_generator};
+use itertools::iproduct;
 use std::error::Error;
 
-type GeneratorOutput = Vec<u64>;
-type PartInput = [u64];
+type GeneratorOutput = Vec<u32>;
+type PartInput = [u32];
 
 #[aoc_generator(day2)]
 pub fn generator(input: &[u8]) -> Result<GeneratorOutput, Box<dyn Error>> {
     use nom::{bytes::complete::tag, combinator::all_consuming, multi::separated_list};
     Ok(
-        all_consuming(separated_list(tag(b","), unsigned_number::<u64>))(input)
+        all_consuming(separated_list(tag(b","), unsigned_number::<u32>))(input)
             .map_err(|err| format!("Parser error: {:x?}", err))?
             .1,
     )
 }
 
-pub fn run_intcode(program: &[u64], noun: u64, verb: u64) -> u64 {
-    let mut mem = program.to_vec();
-    mem[1] = noun;
-    mem[2] = verb;
-
+fn intcode(mem: &mut Vec<u32>) {
     let mut pc = 0usize;
     'main_loop: loop {
         let op = mem[pc];
@@ -42,23 +39,46 @@ pub fn run_intcode(program: &[u64], noun: u64, verb: u64) -> u64 {
             _ => panic!("unexpected op"),
         }
     }
-
-    mem[0]
 }
 
 #[aoc(day2, part1)]
-pub fn part_1(input: &PartInput) -> u64 {
-    run_intcode(input, 12, 2)
+pub fn part_1(input: &PartInput) -> u32 {
+    let mut memory = input.to_vec();
+    memory[1] = 12;
+    memory[2] = 2;
+    intcode(&mut memory);
+    memory[0]
 }
 
 #[aoc(day2, part2)]
-pub fn part_2(input: &PartInput) -> u64 {
-    for noun in 0..100 {
-        for verb in 0..100 {
-            if run_intcode(input, noun, verb) == 19690720 {
-                return 100 * noun + verb;
-            }
+pub fn part_2(input: &PartInput) -> u32 {
+    let mut memory = input.to_vec();
+    for (noun, verb) in iproduct!(0..100, 0..100) {
+        memory[1] = noun;
+        memory[2] = verb;
+        intcode(&mut memory);
+        if memory[0] == 19690720 {
+            return 100 * noun + verb;
         }
+        memory.copy_from_slice(input);
     }
-    panic!("no valid inputs found")
+    panic!("no verb-noun combo found")
+}
+
+#[aoc(day2, part2, cheating)]
+pub fn part_2_cheat(input: &PartInput) -> u32 {
+    let mut memory = input.to_vec();
+    memory[1] = 0;
+    memory[2] = 0;
+    intcode(&mut memory);
+    let c = memory[0];
+
+    memory.copy_from_slice(input);
+    memory[1] = 1;
+    memory[2] = 0;
+    intcode(&mut memory);
+    let a = memory[0] - c;
+
+    let t = 19690720 - c;
+    t % a + t / a * 100
 }
