@@ -3,6 +3,7 @@ use aoc_runner_derive::aoc_lib;
 pub mod solutions {
     pub mod day01;
     pub mod day02;
+    pub mod day03;
 }
 mod util {
     pub mod parsers;
