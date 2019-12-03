@@ -5,66 +5,75 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error;
 
 #[derive(Debug)]
-pub struct Line {
+pub struct Segment {
     dir: u8,
     len: u64,
 }
+#[derive(Debug)]
+pub struct Wire {
+    segments: Vec<Segment>,
+}
 
-type GeneratorOutput = Vec<Vec<Line>>;
-type PartInput = [Vec<Line>];
+type GeneratorOutput = Vec<Wire>;
+type PartInput = [Wire];
 
-fn parse_line(input: &[u8]) -> IResult<&[u8], Line> {
+fn parse_segment(input: &[u8]) -> IResult<&[u8], Segment> {
     use nom::bytes::complete::take;
     let (input, dir) = take(1usize)(input)?;
     let (input, len) = unsigned_number(input)?;
-    Ok((input, Line { dir: dir[0], len }))
+    Ok((input, Segment { dir: dir[0], len }))
 }
 #[aoc_generator(day3)]
 pub fn generator(input: &[u8]) -> Result<GeneratorOutput, Box<dyn Error>> {
-    use nom::{bytes::complete::tag, combinator::all_consuming, multi::separated_list};
+    use nom::{
+        bytes::complete::tag,
+        combinator::{all_consuming, map},
+        multi::separated_list,
+    };
     Ok(all_consuming(separated_list(
         tag(b"\n"),
-        separated_list(tag(b","), parse_line),
+        map(separated_list(tag(b","), parse_segment), |segments| Wire {
+            segments,
+        }),
     ))(input)
     .map_err(|err| format!("Parser error: {:x?}", err))?
     .1)
 }
 
-#[aoc(day3, part1)]
-pub fn part_1(input: &PartInput) -> i32 {
-    let mut current_point = (0i32, 0i32);
-    let mut current_trace = HashSet::new();
-    for line in &input[0] {
-        for _ in 0..line.len {
-            match line.dir {
-                b'U' => current_point.1 += 1,
-                b'D' => current_point.1 -= 1,
-                b'L' => current_point.0 -= 1,
-                b'R' => current_point.0 += 1,
-                _ => panic!(),
-            }
-            current_trace.insert(current_point);
-        }
-    }
-    let mut current_point = (0i32, 0i32);
-    let mut intersections = vec![];
-    for line in &input[1] {
-        for _ in 0..line.len {
-            match line.dir {
-                b'U' => current_point.1 += 1,
-                b'D' => current_point.1 -= 1,
-                b'L' => current_point.0 -= 1,
-                b'R' => current_point.0 += 1,
-                _ => panic!(),
-            }
-            if current_trace.contains(&current_point) {
-                intersections.push(current_point);
-            }
-        }
+impl Wire {
+    fn points(&self) -> impl Iterator<Item = (i32, i32)> + '_ {
+        self.segments
+            .iter()
+            .flat_map(|segment| {
+                let dir = segment.dir;
+                (0..segment.len).map(move |_| dir)
+            })
+            .scan((0i32, 0i32), |point, dir| {
+                match dir {
+                    b'R' => point.0 += 1,
+                    b'L' => point.0 -= 1,
+                    b'U' => point.1 += 1,
+                    b'D' => point.1 -= 1,
+                    _ => panic!(),
+                }
+                Some(*point)
+            })
     }
 
-    intersections
-        .iter()
+    fn distances(&self) -> impl Iterator<Item = ((i32, i32), i32)> + '_ {
+        self.points().scan(0i32, |distance, point| {
+            *distance += 1;
+            Some((point, *distance))
+        })
+    }
+}
+
+#[aoc(day3, part1)]
+pub fn part_1(input: &PartInput) -> i32 {
+    let first_wire_points = input[0].points().collect::<HashSet<_>>();
+    input[1]
+        .points()
+        .filter(|point| first_wire_points.contains(point))
         .map(|(x, y)| x.abs() + y.abs())
         .min()
         .unwrap()
@@ -72,44 +81,20 @@ pub fn part_1(input: &PartInput) -> i32 {
 
 #[aoc(day3, part2)]
 pub fn part_2(input: &PartInput) -> i32 {
-    let mut current_point = (0i32, 0i32);
-    let mut current_distance = 0;
-    let mut first_trace = HashMap::<(i32, i32), i32>::new();
-    for line in &input[0] {
-        for _ in 0..line.len {
-            match line.dir {
-                b'U' => current_point.1 += 1,
-                b'D' => current_point.1 -= 1,
-                b'L' => current_point.0 -= 1,
-                b'R' => current_point.0 += 1,
-                _ => panic!(),
-            }
-            current_distance += 1;
-            first_trace.insert(current_point, current_distance);
-        }
-    }
-    let mut current_point = (0i32, 0i32);
-    let mut current_distance = 0;
-    let mut intersections = vec![];
-    for line in &input[1] {
-        for _ in 0..line.len {
-            match line.dir {
-                b'U' => current_point.1 += 1,
-                b'D' => current_point.1 -= 1,
-                b'L' => current_point.0 -= 1,
-                b'R' => current_point.0 += 1,
-                _ => panic!(),
-            }
-            current_distance += 1;
-            if let Some(other_distance) = first_trace.get(&current_point) {
-                intersections.push((current_point, current_distance + *other_distance));
-            }
-        }
-    }
+    let first_wire_distances = input[0]
+        .distances()
+        .fold(HashMap::new(), |mut map, (k, v)| {
+            map.entry(k).or_insert(v);
+            map
+        });
 
-    intersections
-        .iter()
-        .map(|(_, distance)| *distance)
+    input[1]
+        .distances()
+        .filter_map(|(point, distance)| {
+            first_wire_distances
+                .get(&point)
+                .map(|other| *other + distance)
+        })
         .min()
         .unwrap()
 }
