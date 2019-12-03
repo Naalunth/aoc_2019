@@ -1,6 +1,8 @@
 image: "rustlang/rust:nightly"
 
 test:cargo:
+  before_script:
+    - cargo install cargo-tarpaulin -f
   script:
     - rustc --version && cargo --version
-    - cargo test --all --verbose
+    - cargo tarpaulin --verbose
