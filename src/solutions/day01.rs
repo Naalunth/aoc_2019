@@ -21,15 +21,15 @@ fn fuel_requirement(weight: i32) -> i32 {
 }
 
 #[aoc(day1, part1)]
-pub fn part_1(input: &PartInput) -> i32 {
+pub fn part_1(input: &PartInput) -> u32 {
     input
         .iter()
         .map(|weight| fuel_requirement(*weight as i32))
-        .sum()
+        .sum::<i32>() as u32
 }
 
 #[aoc(day1, part2)]
-pub fn part_2(input: &PartInput) -> i32 {
+pub fn part_2(input: &PartInput) -> u32 {
     fn recursive_fuel_requirement(weight: i32) -> i32 {
         let initial_weight = fuel_requirement(weight);
         let mut total_weight = initial_weight;
@@ -47,7 +47,7 @@ pub fn part_2(input: &PartInput) -> i32 {
     input
         .iter()
         .map(|weight| recursive_fuel_requirement(*weight as i32))
-        .sum()
+        .sum::<i32>() as u32
 }
 
 // saturating sub optimizations
@@ -132,4 +132,52 @@ pub fn part_2_simd(input: &PartInput) -> u32 {
         .map(recursive_fuel_requirement)
         .sum::<u32s>()
         .wrapping_sum()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn part_1_tests(f: fn(input: &PartInput) -> u32) {
+        assert_eq!(f(&[12]), 2);
+        assert_eq!(f(&[14]), 2);
+        assert_eq!(f(&[1969]), 654);
+        assert_eq!(f(&[100756]), 33583);
+    }
+
+    #[test]
+    fn part_1() {
+        part_1_tests(super::part_1);
+    }
+
+    #[test]
+    fn part_1_simd() {
+        part_1_tests(super::part_1_simd);
+    }
+
+    fn part_2_tests(f: fn(input: &PartInput) -> u32) {
+        assert_eq!(f(&[14]), 2);
+        assert_eq!(f(&[1969]), 966);
+        assert_eq!(f(&[100756]), 50346);
+    }
+
+    #[test]
+    fn part_2() {
+        part_2_tests(super::part_2);
+    }
+
+    #[test]
+    fn part_2_simd() {
+        part_2_tests(super::part_2_simd);
+    }
+
+    #[test]
+    fn part_2_iterative() {
+        part_2_tests(super::part_2_iterative);
+    }
+
+    #[test]
+    fn part_2_recursive() {
+        part_2_tests(super::part_2_recursive);
+    }
 }

@@ -98,3 +98,40 @@ pub fn part_2(input: &PartInput) -> i32 {
         .min()
         .unwrap()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_part_1() {
+        let input = generator(
+            b"R75,D30,R83,U83,L12,D49,R71,U7,L72\n\
+            U62,R66,U55,R34,D71,R55,D58,R83",
+        )
+        .unwrap();
+        assert_eq!(part_1(&input), 159);
+        let input = generator(
+            b"R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51\n\
+            U98,R91,D20,R16,D67,R40,U7,R15,U6,R7",
+        )
+        .unwrap();
+        assert_eq!(part_1(&input), 135);
+    }
+
+    #[test]
+    fn test_part_2() {
+        let input = generator(
+            b"R75,D30,R83,U83,L12,D49,R71,U7,L72\n\
+            U62,R66,U55,R34,D71,R55,D58,R83",
+        )
+        .unwrap();
+        assert_eq!(part_2(&input), 610);
+        let input = generator(
+            b"R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51\n\
+            U98,R91,D20,R16,D67,R40,U7,R15,U6,R7",
+        )
+        .unwrap();
+        assert_eq!(part_2(&input), 410);
+    }
+}
