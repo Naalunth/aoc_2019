@@ -1,67 +1,143 @@
-use crate::util::parsers::unsigned_number;
 use aoc_runner_derive::{aoc, aoc_generator};
-use std::collections::HashMap;
+use nom::IResult;
 use std::error::Error;
 
-type GeneratorOutput = Vec<u32>;
-type PartInput = [u32];
+type GeneratorOutput = (Password, Password);
+type PartInput = GeneratorOutput;
+
+fn parse_password(input: &[u8]) -> IResult<&[u8], Password> {
+    use nom::{bytes::complete::take, combinator::map};
+    let mut digits = [0; 6];
+    let mut input = input;
+    for i in 0..6 {
+        let (input_, digit) = map(take(1usize), |d: &[u8]| d[0] - b'0')(input)?;
+        input = input_;
+        digits[i] = digit;
+    }
+    Ok((input, Password { digits }))
+}
 
 #[aoc_generator(day4)]
 pub fn generator(input: &[u8]) -> Result<GeneratorOutput, Box<dyn Error>> {
-    use nom::{bytes::complete::tag, combinator::all_consuming, multi::separated_list};
+    use nom::{bytes::complete::tag, combinator::all_consuming, sequence::separated_pair};
     Ok(
-        all_consuming(separated_list(tag(b"-"), unsigned_number::<u32>))(input)
+        all_consuming(separated_pair(parse_password, tag(b"-"), parse_password))(input)
             .map_err(|err| format!("Parser error: {:x?}", err))?
             .1,
     )
 }
 
-fn digits(n: u32) -> Vec<u32> {
-    fn digits_inner(n: u32, xs: &mut Vec<u32>) {
-        if n >= 10 {
-            digits_inner(n / 10, xs);
-        }
-        xs.push(n % 10);
-    }
-    let mut xs = Vec::new();
-    digits_inner(n, &mut xs);
-    xs
+#[derive(Debug, PartialOrd, PartialEq, Copy, Clone)]
+pub struct Password {
+    digits: [u8; 6],
 }
 
-fn valid_password(pw: u32) -> bool {
-    let digits = digits(pw);
-    let mut monotonous = true;
-    let mut pairs = 0;
-    for (&d0, &d1) in digits.iter().zip(digits.iter().skip(1)) {
-        if d0 > d1 {
-            monotonous = false;
-            break;
-        } else if d0 == d1 {
-            pairs += 1;
+impl From<u32> for Password {
+    fn from(mut num: u32) -> Self {
+        let mut digits = [0u8; 6];
+        for i in (0..6).rev() {
+            digits[i] = (num % 10) as u8;
+            num /= 10;
         }
+        Self { digits }
     }
-    monotonous && pairs >= 1
 }
 
-fn valid_password_2(pw: u32) -> bool {
-    let digits = digits(pw);
-    let counts = digits.iter().fold(HashMap::new(), |mut map, digit| {
-        map.entry(*digit).and_modify(|v| *v += 1).or_insert(1u32);
-        map
-    });
-    valid_password(pw) && counts.values().find(|v| **v == 2).is_some()
+impl Password {
+    fn inc(&mut self) {
+        for i in (0..6).rev() {
+            if self.digits[i] < 9 {
+                self.digits[i] += 1;
+                break;
+            } else {
+                self.digits[i] = 0;
+            }
+        }
+    }
+
+    fn inc_to_next_monotonic_number(&mut self) {
+        let mut lock = None;
+        for i in 1..6 {
+            if let Some(lock) = lock {
+                self.digits[i] = lock;
+            } else {
+                if self.digits[i - 1] > self.digits[i] {
+                    self.digits[i] = self.digits[i - 1];
+                    lock = Some(self.digits[i - 1]);
+                }
+            }
+        }
+    }
+
+    fn condition_1(&self) -> bool {
+        for i in 1..6 {
+            if self.digits[i] == self.digits[i - 1] {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn condition_2(&self) -> bool {
+        let mut count = 1;
+        for i in 1..6 {
+            if self.digits[i] == self.digits[i - 1] {
+                count += 1;
+            } else {
+                if count == 2 {
+                    return true;
+                }
+                count = 1;
+            }
+        }
+        count == 2
+    }
+}
+
+fn count_passwords(
+    first: Password,
+    last: Password,
+    condition: impl Fn(&Password) -> bool,
+) -> usize {
+    let mut pw = first.clone();
+    pw.inc_to_next_monotonic_number();
+    let mut count = 0;
+    while pw <= last {
+        if condition(&pw) {
+            count += 1;
+        }
+        pw.inc();
+        pw.inc_to_next_monotonic_number();
+    }
+    count
 }
 
 #[aoc(day4, part1)]
 pub fn part_1(input: &PartInput) -> usize {
-    (input[0]..=input[1])
-        .filter(|pw| valid_password(*pw))
-        .count()
+    count_passwords(input.0, input.1, Password::condition_1)
 }
 
 #[aoc(day4, part2)]
 pub fn part_2(input: &PartInput) -> usize {
-    (input[0]..=input[1])
-        .filter(|pw| valid_password_2(*pw))
-        .count()
+    count_passwords(input.0, input.1, Password::condition_2)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_part_1() {
+        assert!(Password::from(111111).condition_1());
+        // the digits are always in increasing order the way my program operates
+        // assert!(!Password::from(223450).condition_1());
+        assert!(!Password::from(123789).condition_1());
+    }
+
+    #[test]
+    fn test_part_2() {
+        assert!(Password::from(112233).condition_2());
+        assert!(!Password::from(123444).condition_2());
+        assert!(Password::from(111122).condition_2());
+    }
 }
