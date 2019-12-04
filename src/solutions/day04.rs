@@ -102,16 +102,17 @@ fn count_passwords(
     let mut pw = first.clone();
     pw.inc_to_next_monotonic_number();
     let mut count = 0;
-    loop {
+    while pw <= last {
         if condition(&pw) {
             count += 1;
         }
         if pw == last {
-            break count;
+            break;
         }
         pw.inc();
         pw.inc_to_next_monotonic_number();
     }
+    return count;
 }
 
 #[aoc(day4, part1)]
