@@ -42,6 +42,15 @@ impl From<u32> for Password {
         Self { digits }
     }
 }
+impl From<Password> for usize {
+    fn from(pw: Password) -> Self {
+        let mut result = 0usize;
+        for digit in &pw.digits {
+            result = (result + *digit as usize) * 10;
+        }
+        result / 10
+    }
+}
 
 impl Password {
     fn inc(&mut self) {
@@ -123,6 +132,71 @@ pub fn part_1(input: &PartInput) -> usize {
 #[aoc(day4, part2)]
 pub fn part_2(input: &PartInput) -> usize {
     count_passwords(input.0, input.1, Password::condition_2)
+}
+
+// stolen from Discord user ppraisethesun))))#6504
+#[aoc(day4, part1, stolen_from_ppraisethesun)]
+pub fn part1_ppraisethesun(input: &PartInput) -> usize {
+    let min = input.0.into();
+    let max = input.1.into();
+    let min_ht = min / 100000;
+    let max_ht = (max as f64 / 100000.0).floor() as usize;
+
+    let mut count = 0;
+    for a in min_ht..max_ht + 1 {
+        for b in a..10 {
+            for c in b..10 {
+                for d in c..10 {
+                    for e in d..10 {
+                        for f in e..10 {
+                            if (a == b || b == c || c == d || d == e || e == f)
+                                && (100000 * a + 10000 * b + 1000 * c + 100 * d + 10 * e + f) <= max
+                                && (100000 * a + 10000 * b + 1000 * c + 100 * d + 10 * e + f) >= min
+                            {
+                                //println!("{}{}{}{}{}{}", a,b,c,d,e,f);
+                                count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    count
+}
+
+// stolen from Discord user ppraisethesun))))#6504
+#[aoc(day4, part2, stolen_from_ppraisethesun)]
+pub fn part2_ppraisethesun(input: &PartInput) -> usize {
+    let min = input.0.into();
+    let max = input.1.into();
+    let min_ht = min / 100000;
+    let max_ht = (max as f64 / 100000.0).floor() as usize;
+
+    let mut count = 0;
+    for a in min_ht..max_ht + 1 {
+        for b in a..10 {
+            for c in b..10 {
+                for d in c..10 {
+                    for e in d..10 {
+                        for f in e..10 {
+                            if ((a == b && b != c)
+                                || (a != b && b == c && c != d)
+                                || (b != c && c == d && d != e)
+                                || (c != d && d == e && e != f)
+                                || (d != e && e == f))
+                                && (100000 * a + 10000 * b + 1000 * c + 100 * d + 10 * e + f) <= max
+                                && (100000 * a + 10000 * b + 1000 * c + 100 * d + 10 * e + f) >= min
+                            {
+                                count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    count
 }
 
 #[cfg(test)]
