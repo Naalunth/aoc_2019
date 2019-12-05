@@ -19,3 +19,4 @@ All benchmarks are run on a Ryzen 7 2700X.
 |    2 |                                      95 ns |                                       base: 787 µs<br>cheating: 180 ns |
 |    3 | base: 12.8 ms<br>line intersection: 584 µs |                                                                14.8 ms |
 |    4 |                                    5.16 µs |                                                                6.65 µs |
+|    2 |                                     735 ns |                                                                 820 ns |
