@@ -5,6 +5,7 @@ pub mod solutions {
     pub mod day02;
     pub mod day03;
     pub mod day04;
+    pub mod day05;
 }
 mod util {
     pub mod parsers;

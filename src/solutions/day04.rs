@@ -125,13 +125,13 @@ fn count_passwords(
 }
 
 #[aoc(day4, part1)]
-pub fn part_1(input: &PartInput) -> usize {
-    count_passwords(input.0, input.1, Password::condition_1)
+pub fn part_1(&(first, last): &PartInput) -> usize {
+    count_passwords(first, last, Password::condition_1)
 }
 
 #[aoc(day4, part2)]
-pub fn part_2(input: &PartInput) -> usize {
-    count_passwords(input.0, input.1, Password::condition_2)
+pub fn part_2(&(first, last): &PartInput) -> usize {
+    count_passwords(first, last, Password::condition_2)
 }
 
 // stolen from Discord user ppraisethesun))))#6504
