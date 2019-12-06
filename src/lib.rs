@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate smallvec;
+
 use aoc_runner_derive::aoc_lib;
 
 pub mod solutions {
@@ -6,6 +9,7 @@ pub mod solutions {
     pub mod day03;
     pub mod day04;
     pub mod day05;
+    pub mod day06;
 }
 mod util {
     pub mod parsers;

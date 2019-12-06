@@ -17,6 +17,9 @@ rayon = "1.2.1"
 simd_aligned = "0.2.1"
 itertools = "0.8.2"
 num_enum = "0.4.2"
+petgraph = "0.4.13"
+arrayvec = "0.5.1"
+smallvec = "1.0.0"
 
 [profile.release]
 lto = true
