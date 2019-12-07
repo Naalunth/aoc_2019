@@ -54,8 +54,9 @@ pub fn part_1(input: &PartInput) -> u64 {
     let root = *b"COM";
 
     let mut sum = 0u64;
-    let mut this_layer = vec![root];
-    let mut next_layer = vec![];
+    let mut this_layer = Vec::with_capacity(32);
+    let mut next_layer = Vec::with_capacity(32);
+    this_layer.push(root);
     for depth in 0u64.. {
         for node in this_layer.iter() {
             sum += depth;

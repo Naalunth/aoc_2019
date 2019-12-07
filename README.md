@@ -20,4 +20,5 @@ All benchmarks are run on a Ryzen 7 2700X.
 |    3 | base: 12.8 ms<br>line intersection: 584 µs |                                                                14.8 ms |
 |    4 |                                    5.16 µs |                                                                6.65 µs |
 |    5 |                                     735 ns |                                                                 820 ns |
-|    6 |            base: 75 µs<br>recursive: 74 µs |                                          base: 48 µs<br>in place: 33µs |
+|    6 |            base: 75 µs<br>recursive: 74 µs |                                         base: 48 µs<br>in place: 33 µs |
+|    7 |                                     ~20 ms |                                                                 ~50 ms |
