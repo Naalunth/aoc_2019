@@ -10,18 +10,18 @@ bench = false
 [dependencies]
 aoc-runner = "0.2.2"
 aoc-runner-derive = "0.2.2"
-nom = "5.0.1"
+arraydeque = "0.4.5"
+arrayvec = "0.5.1"
+bstr = "0.2.8"
 btoi = "0.4.1"
+itertools = "0.8.2"
+nom = "5.0.1"
 num-traits = "0.2.10"
+paste = "0.1.6"
+petgraph = "0.4.13"
 rayon = "1.2.1"
 simd_aligned = "0.2.1"
-itertools = "0.8.2"
-petgraph = "0.4.13"
-arrayvec = "0.5.1"
 smallvec = "1.0.0"
-paste = "0.1.6"
-bstr = "0.2.8"
-arraydeque = "0.4.5"
 
 [dev-dependencies]
 
