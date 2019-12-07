@@ -1,7 +1,9 @@
 # Advent of Code 2019 solutions
 
-[![pipeline status](https://gitlab.com/Naalunth/aoc_2019/badges/master/pipeline.svg)](https://gitlab.com/Naalunth/aoc_2019/commits/master)
-[![coverage report](https://gitlab.com/Naalunth/aoc_2019/badges/master/coverage.svg)](https://gitlab.com/Naalunth/aoc_2019/commits/master)
+[![pipeline status](https://gitlab.com/Naalunth/aoc_2019/badges/master/pipeline.svg)
+](https://gitlab.com/Naalunth/aoc_2019/commits/master)
+[![coverage report](https://gitlab.com/Naalunth/aoc_2019/badges/master/coverage.svg)
+](https://gitlab.com/Naalunth/aoc_2019/commits/master)
 
 ## Build
 Should be built using the latest nightly Rust release. Requires [cargo-aoc](https://github.com/gobanos/cargo-aoc).
@@ -12,6 +14,7 @@ cargo aoc
 
 ## Benchmarks
 All benchmarks are run on a Ryzen 7 2700X (8 cores, 16 threads).
+The results are all single threaded unless specified otherwise.
 
 |  Day |                                     Part 1 |                                                                 Part 2 |
 | ---: | -----------------------------------------: | ---------------------------------------------------------------------: |
@@ -19,6 +22,6 @@ All benchmarks are run on a Ryzen 7 2700X (8 cores, 16 threads).
 |    2 |                                      95 ns |                                       base: 787 µs<br>cheating: 180 ns |
 |    3 | base: 12.8 ms<br>line intersection: 584 µs |                                                                14.8 ms |
 |    4 |                                    5.16 µs |                                                                6.65 µs |
-|    5 |                                     735 ns |                                                                 820 ns |
+|    5 |                                     566 ns |                                                                1.05 µs |
 |    6 |            base: 75 µs<br>recursive: 74 µs |                                         base: 48 µs<br>in place: 33 µs |
-|    7 |                                     286 µs |                                                  12 ms (multithreaded) |
+|    7 |                                      66 µs |                                                                 206 µs |
