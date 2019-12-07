@@ -1,11 +1,13 @@
 use crate::util::parsers::signed_number;
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
-use std::error::Error;
-use std::mem::replace;
-use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
-use std::thread;
-use std::time::Duration;
+use nom::lib::std::iter::successors;
+use rayon::prelude::*;
+use std::{
+    error::Error,
+    mem::replace,
+    sync::mpsc::{channel, Receiver, Sender},
+};
 
 type GeneratorOutput = Vec<i64>;
 type PartInput = [i64];
@@ -37,7 +39,7 @@ fn decode_instruction(mut n: i64) -> Instruction {
     }
 }
 
-fn intcode(mem: &mut Vec<i64>, input: Receiver<i64>, output: Sender<i64>, halt_output: Sender<()>) {
+fn intcode(mem: &mut Vec<i64>, input: Receiver<i64>, output: Sender<i64>) {
     fn get_operand(mem: &mut Vec<i64>, address: usize, mode: u8) -> i64 {
         if mode == 0 {
             mem[mem[address] as usize]
@@ -116,7 +118,6 @@ fn intcode(mem: &mut Vec<i64>, input: Receiver<i64>, output: Sender<i64>, halt_o
                 pc += 4;
             }
             99 => {
-                halt_output.send(()).ok();
                 break 'main_loop;
             }
             _ => panic!("unexpected op"),
@@ -129,28 +130,15 @@ pub fn part_1(original: &PartInput) -> i64 {
     (0..=4)
         .permutations(5)
         .map(|params| {
-            let mut computers = params
-                .iter()
-                .map(|param| {
-                    let mut memory = original.to_owned();
-                    let (send_input, input) = channel();
-                    let (output, recv_output) = channel();
-                    let (halt_output, recv_halt_output) = channel();
-                    send_input.send(*param).unwrap();
-                    let thread_handle = thread::spawn(move || {
-                        intcode(&mut memory, input, output, halt_output);
-                    });
-                    (thread_handle, send_input, recv_output, recv_halt_output)
-                })
-                .collect::<Vec<_>>();
-
-            let mut val = 0;
-            for (thread_handle, send_input, recv_output, recv_halt_output) in computers {
-                send_input.send(val).unwrap();
-                thread_handle.join().unwrap();
-                val = recv_output.recv().unwrap();
-            }
-            val
+            params.iter().fold(0, |acc, param| {
+                let mut memory = original.to_owned();
+                let (send_input, input) = channel();
+                let (output, recv_output) = channel();
+                send_input.send(*param).unwrap();
+                send_input.send(acc).unwrap();
+                intcode(&mut memory, input, output);
+                recv_output.recv().unwrap()
+            })
         })
         .max()
         .unwrap()
@@ -160,64 +148,43 @@ pub fn part_1(original: &PartInput) -> i64 {
 pub fn part_2(original: &PartInput) -> i64 {
     (5..=9)
         .permutations(5)
+        .collect::<Vec<_>>()
+        .par_iter()
         .map(|params| {
-            let (send_input_a, input_a) = channel::<i64>();
-            let mut recv_output_e = None;
-            let mut computer_connections = params
+            let (first_input, input_a) = channel::<i64>();
+            let mut last_output = None;
+            let computer_connections = params
                 .iter()
                 .scan(
-                    (input_a, send_input_a.clone(), 0),
+                    (Some(input_a), first_input.clone(), 0),
                     |(last_input, last_send_input, counter), param| {
                         let memory = original.to_owned();
                         let (output, recv_output) = channel();
-                        let input = replace(last_input, recv_output);
+                        let input = replace(last_input, Some(recv_output));
                         last_send_input.send(*param).unwrap();
                         if *counter == 4 {
-                            recv_output_e = Some(replace(last_input, channel().1))
+                            last_output = replace(last_input, None);
                         }
                         *counter += 1;
                         replace(last_send_input, output.clone());
-                        Some((memory, input, output))
+                        Some((memory, input.unwrap(), output))
                     },
                 )
                 .collect::<Vec<_>>();
-            let recv_output_e = recv_output_e.unwrap();
+            let last_output = last_output.unwrap();
 
-            let computers = computer_connections
-                .into_iter()
-                .map(|(mut memory, input, output)| {
-                    let (halt_output, recv_halt_output) = channel();
-                    let thread_handle = {
-                        thread::spawn(move || {
-                            intcode(&mut memory, input, output, halt_output);
-                        })
-                    };
-                    (thread_handle, recv_halt_output)
-                })
-                .collect::<Vec<_>>();
+            for (mut memory, input, output) in computer_connections.into_iter() {
+                std::thread::spawn(move || {
+                    intcode(&mut memory, input, output);
+                });
+            }
 
-            let mut val = 0;
-            'feedback: loop {
-                if let Err(..) = send_input_a.send(val) {
-                    break 'feedback;
-                }
-                'receive: loop {
-                    match recv_output_e.recv_timeout(Duration::from_millis(1)) {
-                        Ok(v) => {
-                            val = v;
-                            break 'receive;
-                        }
-                        Err(RecvTimeoutError::Disconnected) => {
-                            break 'feedback;
-                        }
-                        Err(RecvTimeoutError::Timeout) => {}
-                    }
-                }
-            }
-            for (join_handle, ..) in computers.into_iter() {
-                join_handle.join();
-            }
-            val
+            successors(Some(0), |&x| {
+                first_input.send(x).ok()?;
+                last_output.recv().ok()
+            })
+            .last()
+            .unwrap()
         })
         .max()
         .unwrap()

@@ -11,7 +11,7 @@ cargo aoc
 
 
 ## Benchmarks
-All benchmarks are run on a Ryzen 7 2700X.
+All benchmarks are run on a Ryzen 7 2700X (8 cores, 16 threads).
 
 |  Day |                                     Part 1 |                                                                 Part 2 |
 | ---: | -----------------------------------------: | ---------------------------------------------------------------------: |
@@ -21,4 +21,4 @@ All benchmarks are run on a Ryzen 7 2700X.
 |    4 |                                    5.16 µs |                                                                6.65 µs |
 |    5 |                                     735 ns |                                                                 820 ns |
 |    6 |            base: 75 µs<br>recursive: 74 µs |                                         base: 48 µs<br>in place: 33 µs |
-|    7 |                                     ~20 ms |                                                                 ~50 ms |
+|    7 |                                     286 µs |                                                  12 ms (multithreaded) |
