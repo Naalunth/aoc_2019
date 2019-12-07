@@ -21,7 +21,6 @@ arrayvec = "0.5.1"
 smallvec = "1.0.0"
 paste = "0.1.6"
 bstr = "0.2.8"
-criterion = "0.3.0"
 arraydeque = "0.4.5"
 
 [dev-dependencies]
