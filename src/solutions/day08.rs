@@ -1,72 +1,57 @@
-use crate::util::parsers::unsigned_number;
 use aoc_runner_derive::{aoc, aoc_generator};
-use std::error::Error;
-use std::io::Write;
+use itertools::{zip, Itertools};
 
-type GeneratorOutput = Vec<u32>;
-type PartInput = [u32];
+type GeneratorOutput = Vec<u8>;
+type PartInput = [u8];
 
 #[aoc_generator(day8)]
-pub fn generator(input: &[u8]) -> Result<GeneratorOutput, Box<dyn Error>> {
-    use nom::bytes::complete::take;
-    use nom::combinator::all_consuming;
-    use nom::combinator::map_parser;
-    use nom::multi::many0;
-    Ok(
-        all_consuming(many0(map_parser(take(1usize), unsigned_number::<u32>)))(input)
-            .map_err(|err| format!("Parser error: {:x?}", err))?
-            .1,
-    )
+pub fn generator(input: &[u8]) -> GeneratorOutput {
+    input.iter().map(|b| b - b'0').collect()
 }
+
+const ROW_COUNT: usize = 6;
+const COLUMN_COUNT: usize = 25;
+const PIXEL_COUNT: usize = ROW_COUNT * COLUMN_COUNT;
 
 #[aoc(day8, part1)]
 pub fn part_1(input: &PartInput) -> u32 {
     input
-        .chunks(150)
+        .chunks_exact(PIXEL_COUNT)
         .map(|layer| {
             let mut counts = [0u32; 3];
-            for row in 0..6 {
-                for col in 0..25 {
-                    let pixel = layer[row * 25 + col];
-                    counts[pixel as usize] += 1;
-                }
+            for &pixel in layer {
+                counts[pixel as usize] += 1;
             }
-            (counts[0], (counts[1] * counts[2]))
+            counts
         })
-        .min_by_key(|(zeroes, _)| *zeroes)
-        .map(|(_, score)| score)
+        .min()
+        .map(|[_, c1, c2]| c1 * c2)
         .unwrap()
 }
 
 #[aoc(day8, part2)]
 pub fn part_2(input: &PartInput) -> String {
-    let mut render_target = [0; 150];
-    input.chunks(150).rev().for_each(|layer| {
-        for row in 0..6 {
-            for col in 0..25 {
-                match layer[row * 25 + col] {
-                    pixel @ (0..=1) => render_target[row * 25 + col] = pixel,
-                    _ => {}
-                }
+    let mut render_target = [0; PIXEL_COUNT];
+    for layer in input.chunks_exact(PIXEL_COUNT).rev() {
+        for (&pixel, rt_pixel) in zip(layer, render_target.iter_mut()) {
+            if pixel < 2 {
+                *rt_pixel = pixel;
             }
         }
-    });
-
-    let mut output_image = Vec::<u8>::new();
-    write!(&mut output_image, "\n").unwrap();
-    for row in 0..6 {
-        for col in 0..25 {
-            write!(
-                &mut output_image,
-                "{}",
-                match render_target[row * 25 + col] {
-                    1 => "#",
-                    _ => " ",
-                }
-            )
-            .unwrap();
-        }
-        write!(&mut output_image, "\n").unwrap();
     }
-    String::from_utf8(output_image).unwrap()
+
+    format!(
+        "\n{}",
+        render_target
+            .chunks_exact(COLUMN_COUNT)
+            .map(|row| {
+                row.iter()
+                    .map(|&pixel| match pixel {
+                        1 => "#",
+                        _ => " ",
+                    })
+                    .join("")
+            })
+            .format("\n")
+    )
 }
