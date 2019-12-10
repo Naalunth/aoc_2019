@@ -1,9 +1,8 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
 use num::Integer;
-use ordered_float::OrderedFloat;
 use smallvec::SmallVec;
-use std::collections::BTreeMap;
+use std::{cmp::Ordering, collections::BTreeMap, hint::unreachable_unchecked};
 
 type GeneratorOutput = Vec<(i16, i16)>;
 type PartInput = [(i16, i16)];
@@ -50,8 +49,30 @@ pub fn part_1(input: &PartInput) -> usize {
     find_base(input).1
 }
 
-fn fraction_order_key((x, y): (i16, i16)) -> f64 {
-    -f64::atan2(x as f64, y as f64)
+#[derive(Debug, Eq, PartialEq)]
+struct Coordinate(i16, i16);
+impl Coordinate {
+    fn slope(&self) -> f32 {
+        self.1 as f32 / self.0 as f32
+    }
+}
+
+impl PartialOrd for Coordinate {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self.0.signum(), other.0.signum()) {
+            (1, 1) | (-1, -1) => self.slope().partial_cmp(&other.slope()),
+            (_, -1) => Some(Ordering::Less),
+            (0, 0) => self.1.signum().partial_cmp(&other.1.signum()),
+            (0, 1) => self.1.signum().partial_cmp(&0),
+            _ => other.partial_cmp(self).map(|ord| ord.reverse()),
+        }
+    }
+}
+
+impl Ord for Coordinate {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
 }
 
 #[aoc(day10, part2)]
@@ -62,11 +83,11 @@ pub fn part_2(input: &PartInput) -> i16 {
         .iter()
         .filter(|&coords| *coords != base)
         .map(|&(ox, oy)| (ox - base.0, oy - base.1))
-        .map(|coords| (fraction_order_key(reduce_fraction(coords)), coords))
         .fold(
-            BTreeMap::<OrderedFloat<f64>, SmallVec<[(i16, i16); 2]>>::new(),
-            |mut map, (k, (x, y))| {
-                map.entry(OrderedFloat::from(k))
+            BTreeMap::<Coordinate, SmallVec<[(i16, i16); 2]>>::new(),
+            |mut map, (x, y)| {
+                let (rx, ry) = reduce_fraction((x, y));
+                map.entry(Coordinate(rx, ry))
                     .and_modify(|vec| {
                         if let Err(pos) = vec.binary_search_by_key(&x.gcd(&y), |(x, y)| -x.gcd(y)) {
                             vec.insert(pos, (x, y))
