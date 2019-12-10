@@ -22,6 +22,9 @@ petgraph = "0.4.13"
 rayon = "1.2.1"
 simd_aligned = "0.2.1"
 smallvec = "1.0.0"
+nalgebra = "0.19.0"
+num = "0.2.0"
+ordered-float = "1.0.2"
 
 [dev-dependencies]
 

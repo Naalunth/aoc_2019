@@ -120,8 +120,7 @@ macro_rules! instructions {
         $(
             $opcode:expr => $name:ident
                 ([ $($operand_name:ident + $operand_offset:expr),* ],
-                    [ $($write_operand_name:ident + $write_operand_offset:expr),* ],
-                    [ $($manual_operand_name:ident + $manual_operand_offset:expr),* ]
+                    [ $($write_operand_name:ident + $write_operand_offset:expr),* ]
                     $($ip_increment:tt)*
                 )
                 $code:block
@@ -133,7 +132,6 @@ macro_rules! instructions {
                 fn $name< $( [<Type $operand_name>] : OperandMode, )* $( [<Type $write_operand_name>] : OperandMode, )* > ( &mut self ) {
                     $(let [<$operand_name>] = [<Type $operand_name>] ::load(&self, self.memory[self.instruction_pointer + $operand_offset]);)*
                     $(let [<$write_operand_name>] = [<Type $write_operand_name>] ::address(&self, self.memory[self.instruction_pointer + $write_operand_offset]);)*
-                    $(let [<$manual_operand_name>] = self.memory[self.instruction_pointer + $manual_operand_offset] as Address;)*
                     $code;
                     maybe_pointer_increment!(self $($ip_increment)*);
                 }
@@ -158,8 +156,7 @@ macro_rules! instructions_unsafe {
         $(
             $opcode:expr => $name:ident
                 ([ $($operand_name:ident + $operand_offset:expr),* ],
-                    [ $($write_operand_name:ident + $write_operand_offset:expr),* ],
-                    [ $($manual_operand_name:ident + $manual_operand_offset:expr),* ]
+                    [ $($write_operand_name:ident + $write_operand_offset:expr),* ]
                     $($ip_increment:tt)*
                 )
                 $code:block
@@ -171,7 +168,6 @@ macro_rules! instructions_unsafe {
                 unsafe fn [<$name _unsafe>] < $( [<Type $operand_name>] : OperandMode, )* $( [<Type $write_operand_name>] : OperandMode, )* > ( &mut self ) {
                     $(let [<$operand_name>] = [<Type $operand_name>] ::load_unsafe(&self, *self.memory.get_unchecked(self.instruction_pointer + $operand_offset));)*
                     $(let [<$write_operand_name>] = [<Type $write_operand_name>] ::address(&self, self.memory[self.instruction_pointer + $write_operand_offset]);)*
-                    $(let [<$manual_operand_name>] = *self.memory.get_unchecked(self.instruction_pointer + $manual_operand_offset) as Address;)*
                     $code;
                     maybe_pointer_increment!(self $($ip_increment)*);
                 }
@@ -235,80 +231,80 @@ macro_rules! instructions_unsafe {
 
 impl Emulator {
     instructions! {
-        1 => add ([a + 1, b + 2], [write + 3], [], 4) {
+        1 => add ([a + 1, b + 2], [write + 3], 4) {
             self.memory[write] = a + b;
         }
-        2 => mul ([a + 1, b + 2], [write + 3], [], 4) {
+        2 => mul ([a + 1, b + 2], [write + 3], 4) {
             self.memory[write] = a * b;
         }
-        3 => input ([], [write + 1], [], 2) {
+        3 => input ([], [write + 1], 2) {
             self.state = State::RequestingInput(write as Address);
         }
-        4 => output ([read + 1], [], [], 2) {
+        4 => output ([read + 1], [], 2) {
             self.state = State::HoldingOutput(read);
         }
-        5 => jump_if_true ([test + 1, jump + 2], [], []) {
+        5 => jump_if_true ([test + 1, jump + 2], []) {
             match test {
                 0 => self.instruction_pointer += 3,
                 _ => self.instruction_pointer = jump as Address,
             }
         }
-        6 => jump_if_false ([test + 1, jump + 2], [], []) {
+        6 => jump_if_false ([test + 1, jump + 2], []) {
             match test {
                 0 => self.instruction_pointer = jump as Address,
                 _ => self.instruction_pointer += 3,
             }
         }
-        7 => less_than ([a + 1, b + 2], [write + 3], [], 4) {
+        7 => less_than ([a + 1, b + 2], [write + 3], 4) {
             self.memory[write] = if a < b {1} else {0}
         }
-        8 => equals ([a + 1, b + 2], [write + 3], [], 4) {
+        8 => equals ([a + 1, b + 2], [write + 3], 4) {
             self.memory[write] = if a == b {1} else {0}
         }
-        9 => add_to_relative_base ([rbo + 1], [], [], 2) {
+        9 => add_to_relative_base ([rbo + 1], [], 2) {
             self.relative_base_offset += rbo as Address;
         }
-        99 => halt ([], [], [], 1) {
+        99 => halt ([], [], 1) {
             self.state = State::Halt;
         }
         fn run_instruction();
     }
 
     instructions_unsafe! {
-        1 => add ([a + 1, b + 2], [write + 3], [], 4) {
+        1 => add ([a + 1, b + 2], [write + 3], 4) {
             *self.memory.get_unchecked_mut(write) = a + b;
         }
-        2 => mul ([a + 1, b + 2], [write + 3], [], 4) {
+        2 => mul ([a + 1, b + 2], [write + 3], 4) {
             *self.memory.get_unchecked_mut(write) = a * b;
         }
-        3 => input ([], [write + 1], [], 2) {
+        3 => input ([], [write + 1], 2) {
             self.state = State::RequestingInput(write as Address);
         }
-        4 => output ([read + 1], [], [], 2) {
+        4 => output ([read + 1], [], 2) {
             self.state = State::HoldingOutput(read);
         }
-        5 => jump_if_true ([test + 1, jump + 2], [], []) {
+        5 => jump_if_true ([test + 1, jump + 2], []) {
             match test {
                 0 => self.instruction_pointer += 3,
                 _ => self.instruction_pointer = jump as Address,
             }
         }
-        6 => jump_if_false ([test + 1, jump + 2], [], []) {
+        6 => jump_if_false ([test + 1, jump + 2], []) {
             match test {
                 0 => self.instruction_pointer = jump as Address,
                 _ => self.instruction_pointer += 3,
             }
         }
-        7 => less_than ([a + 1, b + 2], [write + 3], [], 4) {
+        7 => less_than ([a + 1, b + 2], [write + 3], 4) {
             *self.memory.get_unchecked_mut(write) = if a < b {1} else {0}
         }
-        8 => equals ([a + 1, b + 2], [write + 3], [], 4) {
+        8 => equals ([a + 1, b + 2], [write + 3], 4) {
             *self.memory.get_unchecked_mut(write) = if a == b {1} else {0}
         }
-        9 => add_to_relative_base ([rbo + 1], [], [], 2) {
+        9 => add_to_relative_base ([rbo + 1], [], 2) {
             self.relative_base_offset += rbo as Address;
         }
-        99 => halt ([], [], [], 1) {
+        99 => halt ([], [], 1) {
             self.state = State::Halt;
         }
         fn run_instruction_unchecked();

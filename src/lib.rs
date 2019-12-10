@@ -13,6 +13,7 @@ pub mod solutions {
     pub mod day07;
     pub mod day08;
     pub mod day09;
+    pub mod day10;
 }
 mod util {
     pub mod intcode;
