@@ -2,7 +2,7 @@ use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
 use num::Integer;
 use smallvec::SmallVec;
-use std::{cmp::Ordering, collections::BTreeMap, hint::unreachable_unchecked};
+use std::{cmp::Ordering, collections::BTreeMap};
 
 type GeneratorOutput = Vec<(i16, i16)>;
 type PartInput = [(i16, i16)];
