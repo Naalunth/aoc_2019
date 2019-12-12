@@ -46,7 +46,7 @@ pub fn generator(input: &[u8]) -> Result<GeneratorOutput, Box<dyn Error>> {
 pub fn part_1(input: &PartInput) -> i32 {
     let mut moons = input.to_vec();
     for _ in 0..1000 {
-        for idx_a in 0..moons.len() {
+        for idx_a in 0..(moons.len() - 1) {
             for idx_b in (idx_a + 1)..moons.len() {
                 let mut position_delta = moons[idx_b].pos - moons[idx_a].pos;
                 position_delta.iter_mut().for_each(|c| *c = c.signum());
@@ -68,15 +68,6 @@ pub fn part_1(input: &PartInput) -> i32 {
         .sum()
 }
 
-impl Default for Moon {
-    fn default() -> Self {
-        Self {
-            pos: Point3::new(0, 0, 0),
-            vel: Vector3::zeros(),
-        }
-    }
-}
-
 fn cycle_length(moons: impl IntoIterator<Item = (i32, i32)>) -> u64 {
     let (m1, m2) = moons.into_iter().tee();
     let mut pos = m1
@@ -91,7 +82,7 @@ fn cycle_length(moons: impl IntoIterator<Item = (i32, i32)>) -> u64 {
         .unwrap();
     let initial_state = (pos.clone(), vel.clone());
     for i in 1u64.. {
-        for idx_a in 0..4 {
+        for idx_a in 0..3 {
             for idx_b in (idx_a + 1)..4 {
                 let delta = (pos[idx_b] - pos[idx_a]).signum();
                 vel[idx_a] += delta;
