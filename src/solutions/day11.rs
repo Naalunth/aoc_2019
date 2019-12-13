@@ -1,10 +1,11 @@
-use crate::util::intcode::{parse_intcode_text, Emulator, RunResult, Word};
+use crate::util::intcode::{parse_intcode_text, Emulator, RunResult};
 use aoc_runner_derive::{aoc, aoc_generator};
 use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
 use std::collections::HashSet;
 use std::error::Error;
 
+type Word = i64;
 type GeneratorOutput = Vec<Word>;
 type PartInput = [Word];
 

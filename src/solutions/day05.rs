@@ -1,7 +1,8 @@
-use crate::util::intcode::{parse_intcode_text, Emulator, RunResult, Word};
+use crate::util::intcode::{parse_intcode_text, Emulator, RunResult};
 use aoc_runner_derive::{aoc, aoc_generator};
 use std::error::Error;
 
+type Word = i32;
 type GeneratorOutput = Vec<Word>;
 type PartInput = [Word];
 
@@ -14,7 +15,7 @@ fn run_program(program: &[Word], id: Word) -> Word {
     let mut emulator = Emulator::new(program.to_owned());
     emulator.push_input(id);
     let mut result = 0;
-    while let RunResult::Output(val) = unsafe { emulator.run_unchecked() } {
+    while let RunResult::Output(val) = emulator.run() {
         result = val;
     }
     result

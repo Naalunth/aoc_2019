@@ -1,7 +1,8 @@
-use crate::util::intcode::{parse_intcode_text, Emulator, RunResult, Word};
+use crate::util::intcode::{parse_intcode_text, Emulator, RunResult};
 use aoc_runner_derive::{aoc, aoc_generator};
 use std::error::Error;
 
+type Word = i128;
 type GeneratorOutput = Vec<Word>;
 type PartInput = [Word];
 

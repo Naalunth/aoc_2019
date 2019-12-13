@@ -1,9 +1,10 @@
-use crate::util::intcode::{parse_intcode_text, Emulator, RunResult, Word};
+use crate::util::intcode::{parse_intcode_text, Emulator, RunResult};
 use aoc_runner_derive::{aoc, aoc_generator};
 use arrayvec::ArrayVec;
 use itertools::Itertools;
 use std::{error::Error, mem::replace};
 
+type Word = i32;
 type GeneratorOutput = Vec<Word>;
 type PartInput = [Word];
 
@@ -21,7 +22,7 @@ pub fn part_1(original: &PartInput) -> Word {
             params.iter().fold(0, |acc, &param| {
                 let mut emulator = Emulator::new(replace(&mut memory, None).unwrap());
                 emulator.extend_input([param, acc].iter().cloned());
-                if let RunResult::Output(output) = unsafe { emulator.run_unchecked() } {
+                if let RunResult::Output(output) = emulator.run() {
                     let mut mem = emulator.into_memory();
                     mem.copy_from_slice(original);
                     replace(&mut memory, Some(mem));
@@ -43,7 +44,7 @@ pub fn part_2(original: &PartInput) -> Word {
     (5..=9)
         .permutations(5)
         .map(|params| {
-            let mut emulators: Vec<Emulator> = params
+            let mut emulators: Vec<Emulator<Word>> = params
                 .iter()
                 .zip(memories.iter_mut())
                 .map(|(&param, memory)| {
@@ -58,7 +59,7 @@ pub fn part_2(original: &PartInput) -> Word {
                 for emulator in emulators.iter_mut() {
                     emulator.push_input(val);
                     val = 'run: loop {
-                        match unsafe { emulator.run_unchecked() } {
+                        match emulator.run() {
                             RunResult::Halt => break 'feedback,
                             RunResult::InputRequest => panic!(),
                             RunResult::Output(output) => break 'run output,
