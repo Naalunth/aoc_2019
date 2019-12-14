@@ -80,7 +80,7 @@ fn build_dependency_map(input: &[Reaction]) -> HashMap<u32, CompactReaction> {
         .collect::<HashMap<_, _>>()
 }
 
-fn minimum_ore_cost(dependency_map: &HashMap<u32, CompactReaction>, fuel_amount: usize) -> usize {
+fn ore_cost(dependency_map: &HashMap<u32, CompactReaction>, fuel_amount: usize) -> usize {
     let mut current_required_chemicals = IndexMap::new();
     current_required_chemicals.insert(0, fuel_amount);
     let mut leftovers = HashMap::<u32, usize>::new();
@@ -114,42 +114,44 @@ fn minimum_ore_cost(dependency_map: &HashMap<u32, CompactReaction>, fuel_amount:
     ore_required
 }
 
+fn fractional_ore_cost(dependency_map: &HashMap<u32, CompactReaction>, fuel_amount: f64) -> f64 {
+    let mut current_required_chemicals = IndexMap::new();
+    current_required_chemicals.insert(0, fuel_amount);
+    let mut ore_required = 0.0;
+
+    while let Some((required_chemical, required_count)) = current_required_chemicals.pop() {
+        let reaction = dependency_map.get(&required_chemical).unwrap();
+        let batch_count = required_count as f64 / reaction.output.1 as f64;
+        for (input_chemical, input_count) in reaction.inputs.iter() {
+            if *input_chemical == 1 {
+                ore_required += (*input_count as f64) * batch_count;
+            } else {
+                *current_required_chemicals
+                    .entry(*input_chemical)
+                    .or_insert(0.0) += (*input_count as f64) * batch_count;
+            }
+        }
+    }
+
+    ore_required
+}
+
 #[aoc(day14, part1)]
 pub fn part_1(input: &PartInput) -> usize {
-    minimum_ore_cost(&build_dependency_map(input), 1)
+    ore_cost(&build_dependency_map(input), 1)
 }
 
 #[aoc(day14, part2)]
 pub fn part_2(input: &PartInput) -> usize {
     let dependency_map = build_dependency_map(input);
     const GOAL_ORE_COST: usize = 1_000_000_000_000;
-    let cost_of_one = minimum_ore_cost(&dependency_map, 1);
 
-    // inclusive
-    let mut fuel_minimum = GOAL_ORE_COST / cost_of_one;
-    // exclusive
-    let mut fuel_maximum = fuel_minimum * 2;
+    let fuel_maximum = (GOAL_ORE_COST as f64 / fractional_ore_cost(&dependency_map, 1.0)) as usize;
 
-    // find upper bound
-    loop {
-        let cost = minimum_ore_cost(&dependency_map, fuel_maximum);
-        if cost > GOAL_ORE_COST {
-            break;
-        }
-        fuel_maximum *= 2;
-    }
-
-    // binary search
-    loop {
-        let fuel = (fuel_maximum + fuel_minimum) / 2;
-        let cost = minimum_ore_cost(&dependency_map, fuel);
-        if cost > GOAL_ORE_COST {
-            fuel_maximum = fuel;
-        } else if cost <= GOAL_ORE_COST {
-            fuel_minimum = fuel;
-        }
-        if fuel_minimum + 1 == fuel_maximum {
-            return fuel_minimum;
+    for fuel in (0..=fuel_maximum).rev() {
+        if ore_cost(&dependency_map, fuel) <= GOAL_ORE_COST {
+            return fuel;
         }
     }
+    unreachable!();
 }
