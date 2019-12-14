@@ -46,20 +46,49 @@ pub fn generator(input: &[u8]) -> Result<GeneratorOutput, Box<dyn Error>> {
     )
 }
 
-#[aoc(day14, part1)]
-pub fn part_1(input: &PartInput) -> usize {
-    let dependency_map = input
+#[derive(Debug, Clone)]
+pub struct CompactReaction {
+    output: (u32, usize),
+    inputs: Vec<(u32, usize)>,
+}
+
+fn build_dependency_map(input: &[Reaction]) -> HashMap<u32, CompactReaction> {
+    let mut translation_map = HashMap::new();
+    translation_map.insert(b"FUEL".to_vec(), 0u32);
+    translation_map.insert(b"ORE".to_vec(), 1u32);
+    let mut next_chem_key = 2u32;
+    input
         .iter()
-        .map(|reaction| (reaction.output.0.clone(), reaction.clone()))
-        .collect::<HashMap<_, _>>();
+        .map(|reaction| {
+            let mut get_key = |name| {
+                *translation_map.entry(name).or_insert_with(|| {
+                    let res = next_chem_key;
+                    next_chem_key += 1;
+                    res
+                })
+            };
+            let cr = CompactReaction {
+                output: (get_key(reaction.output.0.clone()), reaction.output.1),
+                inputs: reaction
+                    .inputs
+                    .iter()
+                    .map(|(name, count)| (get_key(name.clone()), *count))
+                    .collect::<Vec<_>>(),
+            };
+            (get_key(reaction.output.0.clone()), cr)
+        })
+        .collect::<HashMap<_, _>>()
+}
+
+fn minimum_ore_cost(dependency_map: &HashMap<u32, CompactReaction>, fuel_amount: usize) -> usize {
     let mut current_required_chemicals = IndexMap::new();
-    current_required_chemicals.insert(b"FUEL".to_vec(), 1usize);
-    let mut leftovers = HashMap::<Chemical, usize>::new();
+    current_required_chemicals.insert(0, fuel_amount);
+    let mut leftovers = HashMap::<u32, usize>::new();
     let mut ore_required = 0usize;
 
     while let Some((required_chemical, mut required_count)) = current_required_chemicals.pop() {
         leftovers
-            .entry(required_chemical.clone())
+            .entry(required_chemical)
             .and_modify(|leftover_count| {
                 let sub_amt = (*leftover_count).min(required_count);
                 required_count -= sub_amt;
@@ -70,11 +99,11 @@ pub fn part_1(input: &PartInput) -> usize {
             let batch_count = (required_count - 1 + reaction.output.1) / reaction.output.1;
             let made_count = batch_count * reaction.output.1;
             for (input_chemical, input_count) in reaction.inputs.iter() {
-                if input_chemical == b"ORE" {
+                if *input_chemical == 1 {
                     ore_required += input_count * batch_count;
                 } else {
                     *current_required_chemicals
-                        .entry(input_chemical.clone())
+                        .entry(*input_chemical)
                         .or_insert(0) += input_count * batch_count;
                 }
             }
@@ -85,51 +114,42 @@ pub fn part_1(input: &PartInput) -> usize {
     ore_required
 }
 
+#[aoc(day14, part1)]
+pub fn part_1(input: &PartInput) -> usize {
+    minimum_ore_cost(&build_dependency_map(input), 1)
+}
+
 #[aoc(day14, part2)]
 pub fn part_2(input: &PartInput) -> usize {
-    let dependency_map = input
-        .iter()
-        .map(|reaction| (reaction.output.0.clone(), reaction.clone()))
-        .collect::<HashMap<_, _>>();
-    let mut current_required_chemicals = IndexMap::new();
-    current_required_chemicals.insert(b"FUEL".to_vec(), 6_700_000usize);
-    let mut leftovers = HashMap::<Chemical, usize>::new();
-    let mut ore_required = 0usize;
-    let mut fuel_made = 6_700_000usize;
+    let dependency_map = build_dependency_map(input);
+    const GOAL_ORE_COST: usize = 1_000_000_000_000;
+    let cost_of_one = minimum_ore_cost(&dependency_map, 1);
 
-    'outer: loop {
-        *current_required_chemicals
-            .entry(b"FUEL".to_vec())
-            .or_insert(0) += 1usize;
-        while let Some((required_chemical, mut required_count)) = current_required_chemicals.pop() {
-            leftovers
-                .entry(required_chemical.clone())
-                .and_modify(|leftover_count| {
-                    let sub_amt = (*leftover_count).min(required_count);
-                    required_count -= sub_amt;
-                    *leftover_count -= sub_amt;
-                });
-            if required_count > 0 {
-                let reaction = dependency_map.get(&required_chemical).unwrap();
-                let batch_count = (required_count - 1 + reaction.output.1) / reaction.output.1;
-                let made_count = batch_count * reaction.output.1;
-                for (input_chemical, input_count) in reaction.inputs.iter() {
-                    if input_chemical == b"ORE" {
-                        ore_required += input_count * batch_count;
-                        if ore_required > 1_000_000_000_000 {
-                            break 'outer;
-                        }
-                    } else {
-                        *current_required_chemicals
-                            .entry(input_chemical.clone())
-                            .or_insert(0) += input_count * batch_count;
-                    }
-                }
-                *leftovers.entry(required_chemical).or_insert(0) += made_count - required_count;
-            }
+    // inclusive
+    let mut fuel_minimum = GOAL_ORE_COST / cost_of_one;
+    // exclusive
+    let mut fuel_maximum = fuel_minimum * 2;
+
+    // find upper bound
+    loop {
+        let cost = minimum_ore_cost(&dependency_map, fuel_maximum);
+        if cost > GOAL_ORE_COST {
+            break;
         }
-        fuel_made += 1;
+        fuel_maximum *= 2;
     }
 
-    fuel_made
+    // binary search
+    loop {
+        let fuel = (fuel_maximum + fuel_minimum) / 2;
+        let cost = minimum_ore_cost(&dependency_map, fuel);
+        if cost > GOAL_ORE_COST {
+            fuel_maximum = fuel;
+        } else if cost <= GOAL_ORE_COST {
+            fuel_minimum = fuel;
+        }
+        if fuel_minimum + 1 == fuel_maximum {
+            return fuel_minimum;
+        }
+    }
 }
