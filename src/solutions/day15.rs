@@ -1,14 +1,13 @@
 use crate::util::intcode::{parse_intcode_text, Emulator};
 use aoc_runner_derive::{aoc, aoc_generator};
 use arrayvec::ArrayVec;
-use itertools::Itertools;
 use nalgebra::{Point2, Vector2};
-use petgraph::algo::dijkstra;
-use petgraph::{algo::astar, graph::DefaultIx, graph::NodeIndex, Graph, Undirected};
-use std::{
-    collections::{HashMap, HashSet},
-    error::Error,
+use petgraph::{
+    algo::{astar, dijkstra},
+    graph::{DefaultIx, NodeIndex},
+    Graph, Undirected,
 };
+use std::{collections::HashMap, error::Error};
 
 type Word = i64;
 type GeneratorOutput = Vec<Word>;
@@ -45,56 +44,49 @@ fn cardinal_directions() -> impl Iterator<Item = Vector2<i64>> {
 
 fn search_path(
     graph: &Graph<Point2<i64>, (), Undirected, DefaultIx>,
-    paths: &HashMap<Point2<i64>, NodeIndex>,
+    map_elements: &HashMap<Point2<i64>, Option<NodeIndex>>,
     start: &Point2<i64>,
     end: &Point2<i64>,
 ) -> Option<(i64, Vec<NodeIndex>)> {
     astar(
         &graph,
-        *paths.get(start).unwrap(),
-        |node| node == *paths.get(end).unwrap(),
+        map_elements.get(start).unwrap().unwrap(),
+        |node| node == map_elements.get(end).unwrap().unwrap(),
         |_| 1i64,
         |node| manhattan_distance(end, graph.node_weight(node).unwrap()),
     )
 }
 
-#[aoc(day15, part1)]
-pub fn part_1(input: &PartInput) -> i64 {
-    let mut control_program = Emulator::new(input.to_vec());
-    let mut open_list = Vec::<(Point2<i64>, Vector2<i64>)>::new();
+fn build_map(
+    program: &[Word],
+) -> (
+    Graph<Point2<i64>, (), Undirected, DefaultIx>,
+    HashMap<Point2<i64>, Option<NodeIndex>>,
+    Option<Point2<i64>>,
+) {
+    let mut control_program = Emulator::new(program.to_vec());
     let mut position = Point2::<i64>::new(0, 0);
     let mut path_graph = Graph::<Point2<i64>, (), Undirected, DefaultIx>::default();
-    let mut paths = HashMap::<Point2<i64>, NodeIndex>::new();
-    let mut walls = HashSet::<Point2<i64>>::new();
+    let mut map_elements = HashMap::<Point2<i64>, Option<NodeIndex>>::new();
     let mut oxygen_tank_position = None;
+    let mut open_list = Vec::<(Point2<i64>, Vector2<i64>)>::new();
 
+    let first_node = path_graph.add_node(position.clone());
+    map_elements.insert(position.clone(), Some(first_node));
     for direction in cardinal_directions() {
         open_list.push((position.clone(), direction));
     }
-    let first_node = path_graph.add_node(position.clone());
-    paths.insert(position.clone(), first_node);
 
-    while let Some((target_idx, _)) = open_list
-        .iter()
-        .enumerate()
-        .min_by_key(|(_, (p, _))| manhattan_distance(&position, p))
-    {
-        let (target_position, target_direction) = open_list.swap_remove(target_idx);
-        //        println!(
-        //            "position: {:?}, target: {:?}, t_dir: {:?}",
-        //            (position.x, position.y),
-        //            (target_position.x, target_position.y),
-        //            (target_direction.x, target_direction.y)
-        //        );
+    while let Some((target_position, target_direction)) = open_list.pop() {
+        if map_elements.contains_key(&(target_position + target_direction)) {
+            continue;
+        }
 
-        // move to inspect next open element
+        // move to next open element
         if position != target_position {
-            let (_, path) = search_path(&path_graph, &paths, &position, &target_position).unwrap();
+            let (_, path) =
+                search_path(&path_graph, &map_elements, &position, &target_position).unwrap();
             for target_node in path.into_iter().skip(1) {
-                //                println!(
-                //                    "moving to position: {:?}",
-                //                    path_graph.node_weight(target_node)
-                //                );
                 let next_direction = path_graph.node_weight(target_node).unwrap() - position;
                 control_program.push_input(to_intcode_direction(&next_direction));
                 control_program.run();
@@ -107,7 +99,7 @@ pub fn part_1(input: &PartInput) -> i64 {
         let bot_status = control_program.run().into_option().unwrap();
         match bot_status {
             0 => {
-                walls.insert(target_position + target_direction);
+                map_elements.insert(target_position + target_direction, None);
             }
             1 | 2 => {
                 position += target_direction;
@@ -115,52 +107,29 @@ pub fn part_1(input: &PartInput) -> i64 {
                     oxygen_tank_position = Some(position.clone());
                 }
                 let new_node = path_graph.add_node(position.clone());
-                paths.insert(position.clone(), new_node);
+                map_elements.insert(position.clone(), Some(new_node));
                 for direction in cardinal_directions() {
-                    if let Some(other) = paths.get(&(position + direction)) {
+                    if let Some(Some(other)) = map_elements.get(&(position + direction)) {
                         path_graph.add_edge(new_node, *other, ());
-                    } else if walls.get(&(position + direction)).is_none() {
+                    } else {
                         open_list.push((position.clone(), direction.clone()));
                     }
                 }
             }
             _ => unreachable!(),
         }
-
-        //        let (px_min, px_max) = paths.keys().map(|p| p.x).minmax().into_option().unwrap();
-        //        let (py_min, py_max) = paths.keys().map(|p| p.y).minmax().into_option().unwrap();
-        //        let (wx_min, wx_max) = walls.iter().map(|p| p.x).minmax().into_option().unwrap();
-        //        let (wy_min, wy_max) = walls.iter().map(|p| p.y).minmax().into_option().unwrap();
-        //        println!(
-        //            "\n{}",
-        //            ((py_min.min(wy_min) - 1)..=(py_max.max(wy_max) + 1))
-        //                .rev()
-        //                .map(|y| {
-        //                    let paths = &paths;
-        //                    let walls = &walls;
-        //                    let position = &position;
-        //                    ((px_min.min(wx_min) - 1)..=(px_max.max(wx_max) + 1))
-        //                        .map(move |x| {
-        //                            let point = Point2::new(x, y);
-        //                            if *position == point {
-        //                                "*"
-        //                            } else if paths.get(&point).is_some() {
-        //                                " "
-        //                            } else if walls.get(&point).is_some() {
-        //                                "█"
-        //                            } else {
-        //                                "░"
-        //                            }
-        //                        })
-        //                        .format("")
-        //                })
-        //                .format("\n")
-        //        )
     }
+
+    (path_graph, map_elements, oxygen_tank_position)
+}
+
+#[aoc(day15, part1)]
+pub fn part_1(input: &PartInput) -> i64 {
+    let (path_graph, map_elements, oxygen_tank_position) = build_map(input);
 
     let (cost, _) = search_path(
         &path_graph,
-        &paths,
+        &map_elements,
         &Point2::new(0, 0),
         &oxygen_tank_position.unwrap(),
     )
@@ -170,109 +139,14 @@ pub fn part_1(input: &PartInput) -> i64 {
 
 #[aoc(day15, part2)]
 pub fn part_2(input: &PartInput) -> i64 {
-    let mut control_program = Emulator::new(input.to_vec());
-    let mut open_list = Vec::<(Point2<i64>, Vector2<i64>)>::new();
-    let mut position = Point2::<i64>::new(0, 0);
-    let mut path_graph = Graph::<Point2<i64>, (), Undirected, DefaultIx>::default();
-    let mut paths = HashMap::<Point2<i64>, NodeIndex>::new();
-    let mut walls = HashSet::<Point2<i64>>::new();
-    let mut oxygen_tank_position = None;
-
-    for direction in cardinal_directions() {
-        open_list.push((position.clone(), direction));
-    }
-    let first_node = path_graph.add_node(position.clone());
-    paths.insert(position.clone(), first_node);
-
-    while let Some((target_idx, _)) = open_list
-        .iter()
-        .enumerate()
-        .min_by_key(|(_, (p, _))| manhattan_distance(&position, p))
-    {
-        let (target_position, target_direction) = open_list.swap_remove(target_idx);
-        //        println!(
-        //            "position: {:?}, target: {:?}, t_dir: {:?}",
-        //            (position.x, position.y),
-        //            (target_position.x, target_position.y),
-        //            (target_direction.x, target_direction.y)
-        //        );
-
-        // move to inspect next open element
-        if position != target_position {
-            let (_, path) = search_path(&path_graph, &paths, &position, &target_position).unwrap();
-            for target_node in path.into_iter().skip(1) {
-                //                println!(
-                //                    "moving to position: {:?}",
-                //                    path_graph.node_weight(target_node)
-                //                );
-                let next_direction = path_graph.node_weight(target_node).unwrap() - position;
-                control_program.push_input(to_intcode_direction(&next_direction));
-                control_program.run();
-                position += next_direction;
-            }
-        }
-
-        // inspect open element
-        control_program.push_input(to_intcode_direction(&target_direction));
-        let bot_status = control_program.run().into_option().unwrap();
-        match bot_status {
-            0 => {
-                walls.insert(target_position + target_direction);
-            }
-            1 | 2 => {
-                position += target_direction;
-                if bot_status == 2 {
-                    oxygen_tank_position = Some(position.clone());
-                }
-                let new_node = path_graph.add_node(position.clone());
-                paths.insert(position.clone(), new_node);
-                for direction in cardinal_directions() {
-                    if let Some(other) = paths.get(&(position + direction)) {
-                        path_graph.add_edge(new_node, *other, ());
-                    } else if walls.get(&(position + direction)).is_none() {
-                        open_list.push((position.clone(), direction.clone()));
-                    }
-                }
-            }
-            _ => unreachable!(),
-        }
-
-        //        println!("walls: {:?}", walls);
-        //
-        //        let (px_min, px_max) = paths.keys().map(|p| p.x).minmax().into_option().unwrap();
-        //        let (py_min, py_max) = paths.keys().map(|p| p.y).minmax().into_option().unwrap();
-        //        let (wx_min, wx_max) = walls.iter().map(|p| p.x).minmax().into_option().unwrap();
-        //        let (wy_min, wy_max) = walls.iter().map(|p| p.y).minmax().into_option().unwrap();
-        //        println!(
-        //            "\n{}",
-        //            ((py_min.min(wy_min) - 1)..=(py_max.max(wy_max) + 1))
-        //                .rev()
-        //                .map(|y| {
-        //                    let paths = &paths;
-        //                    let walls = &walls;
-        //                    let position = &position;
-        //                    ((px_min.min(wx_min) - 1)..=(px_max.max(wx_max) + 1))
-        //                        .map(move |x| {
-        //                            let point = Point2::new(x, y);
-        //                            if *position == point {
-        //                                "*"
-        //                            } else if paths.get(&point).is_some() {
-        //                                " "
-        //                            } else if walls.get(&point).is_some() {
-        //                                "█"
-        //                            } else {
-        //                                "░"
-        //                            }
-        //                        })
-        //                        .format("")
-        //                })
-        //                .format("\n")
-        //        )
-    }
+    let (path_graph, map_elements, oxygen_tank_position) = build_map(input);
 
     dijkstra(
         &path_graph,
-        *paths.get(&oxygen_tank_position.unwrap()).unwrap(),
+        map_elements
+            .get(&oxygen_tank_position.unwrap())
+            .unwrap()
+            .unwrap(),
         None,
         |_| 1,
     )
