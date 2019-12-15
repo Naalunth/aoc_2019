@@ -67,6 +67,15 @@ pub enum RunResult<Word> {
     Output(Word),
 }
 
+impl<Word> RunResult<Word> {
+    pub fn into_option(self) -> Option<Word> {
+        match self {
+            RunResult::Output(w) => Some(w),
+            _ => None,
+        }
+    }
+}
+
 macro_rules! maybe_pointer_increment {
     ($self:ident, $ip_increment:expr) => {
         $self.instruction_pointer += $ip_increment;
